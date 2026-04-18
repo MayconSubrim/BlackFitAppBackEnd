@@ -20,14 +20,19 @@ model User {
   password     String
   role         Role
   instructorId String?
-  instructor   User?    @relation("StudentInstructor", fields: [instructorId], references: [id])
+  instructor   User?    @relation("StudentInstructor", fields: [instructorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   students     User[]   @relation("StudentInstructor")
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
-  workoutsCreated    Workout[]          @relation("InstructorWorkouts")
+  workoutsCreated    Workout[]           @relation("InstructorWorkouts")
   workoutAssignments WorkoutAssignment[]
   workoutSessions    WorkoutSession[]
   checkins           Checkin[]
+  studentRatings     Rating[]            @relation("StudentRatings")
+  instructorRatings  Rating[]            @relation("InstructorRatings")
+
+  @@index([instructorId])
 }
 
 model Workout {
@@ -36,35 +41,68 @@ model Workout {
   description       String?
   estimatedCalories Int
   estimatedDuration Int
+  difficulty        String?
+  dayOfWeek         String?
   instructorId      String
-  instructor        User     @relation("InstructorWorkouts", fields: [instructorId], references: [id])
+  instructor        User     @relation("InstructorWorkouts", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
 
+  exercises   WorkoutExercise[]
   assignments WorkoutAssignment[]
   sessions    WorkoutSession[]
+
+  @@index([instructorId])
+}
+
+model WorkoutExercise {
+  id          String   @id @default(uuid())
+  workoutId   String
+  name        String
+  sets        Int
+  reps        Int
+  rest        String
+  description String?
+  videoUrl    String?
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([workoutId, order])
+  @@index([workoutId])
 }
 
 model WorkoutAssignment {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
   workoutId String
+  createdAt DateTime @default(now())
 
-  user      User    @relation(fields: [userId], references: [id])
-  workout   Workout @relation(fields: [workoutId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([userId, workoutId])
+  @@index([workoutId])
 }
 
 model WorkoutSession {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   userId         String
   workoutId      String
-  actualCalories Int
-  actualDuration Int
-  createdAt      DateTime @default(now())
+  actualCalories Int       @default(0)
+  actualDuration Int       @default(0)
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id])
-  workout Workout @relation(fields: [workoutId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId])
+  @@index([workoutId])
 }
 
 model Checkin {
@@ -72,5 +110,23 @@ model Checkin {
   userId    String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId])
+}
+
+model Rating {
+  id           String   @id @default(uuid())
+  studentId    String
+  instructorId String
+  rating       Int
+  comment      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  student    User @relation("StudentRatings", fields: [studentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  instructor User @relation("InstructorRatings", fields: [instructorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([studentId, instructorId])
+  @@index([instructorId])
 }

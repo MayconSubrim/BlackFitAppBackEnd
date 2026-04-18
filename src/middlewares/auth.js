@@ -1,4 +1,6 @@
 import jwt from 'jsonwebtoken';
+import { requireEnv } from '../utils/env.js';
+import { handleError, unauthorized } from '../utils/errors.js';
 
 export function auth(req, res, next) {
   // pega o header Authorization
@@ -6,33 +8,33 @@ export function auth(req, res, next) {
 
   // verifica se existe
   if (!authHeader) {
-    return res.status(401).json({ error: 'Token não informado' });
+    return handleError(unauthorized('Token nao informado'), res);
   }
 
   // formato esperado: "Bearer TOKEN"
   const parts = authHeader.split(' ');
 
   if (parts.length !== 2) {
-    return res.status(401).json({ error: 'Token mal formatado' });
+    return handleError(unauthorized('Token mal formatado'), res);
   }
 
   const [scheme, token] = parts;
 
-  // verifica se começa com Bearer
+  // verifica se comeca com Bearer
   if (scheme !== 'Bearer') {
-    return res.status(401).json({ error: 'Token mal formatado' });
+    return handleError(unauthorized('Token mal formatado'), res);
   }
 
   try {
     // valida o token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, requireEnv('JWT_SECRET'));
 
     // salva no request
     req.user = decoded;
 
     // segue para a rota
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Token inválido ou expirado' });
+    return next();
+  } catch (error) {
+    return handleError(unauthorized('Token invalido ou expirado'), res);
   }
 }
