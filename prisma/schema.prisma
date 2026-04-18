@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ALUNO
+  INSTRUTOR
+  RECEPCIONISTA
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         Role
+  instructorId String?
+  instructor   User?    @relation("StudentInstructor", fields: [instructorId], references: [id])
+  students     User[]   @relation("StudentInstructor")
+  createdAt    DateTime @default(now())
+
+  workoutsCreated    Workout[]          @relation("InstructorWorkouts")
+  workoutAssignments WorkoutAssignment[]
+  workoutSessions    WorkoutSession[]
+  checkins           Checkin[]
+}
+
+model Workout {
+  id                String   @id @default(uuid())
+  title             String
+  description       String?
+  estimatedCalories Int
+  estimatedDuration Int
+  instructorId      String
+  instructor        User     @relation("InstructorWorkouts", fields: [instructorId], references: [id])
+  createdAt         DateTime @default(now())
+
+  assignments WorkoutAssignment[]
+  sessions    WorkoutSession[]
+}
+
+model WorkoutAssignment {
+  id        String  @id @default(uuid())
+  userId    String
+  workoutId String
+
+  user      User    @relation(fields: [userId], references: [id])
+  workout   Workout @relation(fields: [workoutId], references: [id])
+
+  @@unique([userId, workoutId])
+}
+
+model WorkoutSession {
+  id             String   @id @default(uuid())
+  userId         String
+  workoutId      String
+  actualCalories Int
+  actualDuration Int
+  createdAt      DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  workout Workout @relation(fields: [workoutId], references: [id])
+}
+
+model Checkin {
+  id        String   @id @default(uuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
