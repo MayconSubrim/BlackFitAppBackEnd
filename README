@@ -1,0 +1,38 @@
+# BlackFit Backend
+
+API do sistema BlackFit, desenvolvida para o PEX.
+
+## Tecnologias
+- Node.js
+- Express
+- Prisma
+- SQLite
+- JWT
+- Bcrypt
+
+## Como rodar o projeto
+
+### 1. Instalar dependências
+npm install
+
+### 2. Configurar variáveis de ambiente
+Criar um arquivo `.env` com:
+
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="sua_chave_secreta"
+PORT=3000
+
+### 3. Rodar migrations
+npx prisma migrate dev --name init
+
+### 4. Iniciar servidor
+npm run dev
+
+## Estrutura do projeto
+- `src/routes`: rotas da aplicação
+- `src/middlewares`: middlewares, como autenticação
+- `src/lib`: integração com Prisma
+- `prisma`: schema e migrations
+
+## Objetivo do projeto
+Sistema acadêmico para gestão de academia, com foco em alunos, instrutores, check-in e treinos.
