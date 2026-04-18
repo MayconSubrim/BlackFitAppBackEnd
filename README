@@ -36,3 +36,17 @@ npm run dev
 
 ## Objetivo do projeto
 Sistema acadêmico para gestão de academia, com foco em alunos, instrutores, check-in e treinos.
+
+## Próximas etapas
+- [x] Estrutura inicial do backend
+- [x] Configuração do Prisma
+- [x] Criar autenticação com JWT
+- [x] Criar rota de register
+- [ ] Criar rota de login
+- [ ] Criar middleware de autenticação
+- [ ] Criar fluxo de recepcionista cadastrar aluno
+- [ ] Criar rota de criação de treinos
+- [ ] Criar atribuição de treinos
+- [ ] Criar check-in
+- [ ] Criar dashboard/stats
+- [ ] Integrar frontend com backend
