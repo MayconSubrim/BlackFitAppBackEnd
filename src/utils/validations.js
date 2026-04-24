@@ -96,3 +96,47 @@ export function normalizePositiveInt(
 
   return parsedValue;
 }
+
+export function normalizeExercises(exercises) {
+  if (exercises == null) return [];
+
+  if (!Array.isArray(exercises)) {
+    throw badRequest('Campo invalido: exercises');
+  }
+
+  const usedOrders = new Set();
+
+  return exercises.map((exercise, index) => {
+    if (!exercise || typeof exercise !== 'object' || Array.isArray(exercise)) {
+      throw badRequest(`Exercicio invalido na posicao ${index + 1}`);
+    }
+
+    const order = exercise.order == null
+      ? index + 1
+      : normalizePositiveInt(exercise.order, `exercises[${index}].order`, { max: 1000 });
+
+    if (usedOrders.has(order)) {
+      throw badRequest('Ordem dos exercicios duplicada');
+    }
+
+    usedOrders.add(order);
+
+    return {
+      name: normalizeString(exercise.name, `exercises[${index}].name`, {
+        maxLength: 120
+      }),
+      sets: normalizePositiveInt(exercise.sets, `exercises[${index}].sets`, {
+        max: 100
+      }),
+      reps: normalizePositiveInt(exercise.reps, `exercises[${index}].reps`, {
+        max: 1000
+      }),
+      rest: normalizeString(exercise.rest, `exercises[${index}].rest`, {
+        maxLength: 50
+      }),
+      description: normalizeOptionalText(exercise.description, `exercises[${index}].description`, 500),
+      videoUrl: normalizeOptionalText(exercise.videoUrl, `exercises[${index}].videoUrl`, 500),
+      order
+    };
+  });
+}
