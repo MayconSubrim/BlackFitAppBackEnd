@@ -47,8 +47,8 @@ Sistema acadêmico para gestão de academia, com foco em alunos, instrutores, ch
 - [x] Melhorar validação 
 - [x] Melhorar schema do prisma
 - [x] Criar fluxo de recepcionista cadastrar aluno e instrutor
-- [ ] Criar rota de criação de treinos
-- [ ] Criar atribuição de treinos
+- [x] Criar rota de criação de treinos
+- [x] Criar atribuição de treinos
 - [ ] Criar check-in
 - [ ] Criar dashboard/stats
 - [ ] Integrar frontend com backend
