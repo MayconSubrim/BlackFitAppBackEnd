@@ -49,6 +49,6 @@ Sistema acadêmico para gestão de academia, com foco em alunos, instrutores, ch
 - [x] Criar fluxo de recepcionista cadastrar aluno e instrutor
 - [x] Criar rota de criação de treinos
 - [x] Criar atribuição de treinos
-- [ ] Criar check-in
+- [x] Criar check-in e ranking
 - [ ] Criar dashboard/stats
 - [ ] Integrar frontend com backend
