@@ -6,9 +6,11 @@ import { handleError } from '../utils/errors.js';
 const router = Router();
 
 function getTodayRange() {
+  // define o inicio do dia atual
   const start = new Date();
   start.setHours(0, 0, 0, 0);
 
+  // define o inicio do proximo dia
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
 
@@ -16,8 +18,10 @@ function getTodayRange() {
 }
 
 function calculateStreak(checkins) {
+  // sem check-ins, sem sequencia
   if (!checkins.length) return 0;
 
+  // extrair dias unicos no formato YYYY-MM-DD e ordenar do mais recente para o mais antigo
   const days = [...new Set(
     checkins.map((checkin) => checkin.createdAt.toISOString().slice(0, 10))
   )].sort().reverse();
@@ -26,6 +30,7 @@ function calculateStreak(checkins) {
   let current = new Date();
   current.setHours(0, 0, 0, 0);
 
+  // contar quantos dias consecutivos existem a partir de hoje ou ontem
   for (const day of days) {
     const checkDate = new Date(`${day}T00:00:00`);
     const diff = Math.floor((current - checkDate) / (1000 * 60 * 60 * 24));
@@ -43,8 +48,10 @@ function calculateStreak(checkins) {
 
 router.post('/', auth, async (req, res) => {
   try {
+    // obter intervalo do dia atual
     const { start, end } = getTodayRange();
 
+    // verificar se o usuario ja fez check-in hoje
     const existingCheckin = await prisma.checkin.findFirst({
       where: {
         userId: req.user.id,
@@ -56,16 +63,19 @@ router.post('/', auth, async (req, res) => {
     });
 
     if (existingCheckin) {
+      // retornar o check-in ja existente do dia
       return res.status(200).json({
         alreadyCheckedIn: true,
         checkin: existingCheckin
       });
     }
 
+    // criar novo check-in para o usuario autenticado
     const checkin = await prisma.checkin.create({
       data: { userId: req.user.id }
     });
 
+    // retornar o novo check-in criado
     return res.status(201).json({
       alreadyCheckedIn: false,
       checkin
@@ -77,6 +87,7 @@ router.post('/', auth, async (req, res) => {
 
 router.get('/ranking', auth, async (req, res) => {
   try {
+    // agrupar check-ins por usuario e ordenar pelos maiores totais
     const ranking = await prisma.checkin.groupBy({
       by: ['userId'],
       _count: {
@@ -89,8 +100,10 @@ router.get('/ranking', auth, async (req, res) => {
       }
     });
 
+    // extrair ids dos usuarios presentes no ranking
     const userIds = ranking.map((item) => item.userId);
 
+    // buscar os usuarios e todos os check-ins relacionados em paralelo
     const [users, allCheckins] = await Promise.all([
       userIds.length
         ? prisma.user.findMany({
@@ -110,7 +123,10 @@ router.get('/ranking', auth, async (req, res) => {
         : []
     ]);
 
+    // indexar usuarios por id para facilitar o acesso
     const usersById = new Map(users.map((user) => [user.id, user]));
+
+    // agrupar check-ins por usuario para calcular a sequencia
     const checkinsByUser = new Map();
 
     for (const checkin of allCheckins) {
@@ -119,6 +135,7 @@ router.get('/ranking', auth, async (req, res) => {
       checkinsByUser.set(checkin.userId, userCheckins);
     }
 
+    // montar a resposta final do ranking com posicao, total e sequencia
     return res.json(
       ranking.map((item, index) => ({
         rank: index + 1,
