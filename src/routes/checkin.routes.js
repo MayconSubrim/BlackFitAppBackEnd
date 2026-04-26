@@ -85,6 +85,49 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+router.get('/stats', auth, async (req, res) => {
+  try {
+    // obter o usuario autenticado e o inicio do dia atual
+    const userId = req.user.id;
+    const { start: today } = getTodayRange();
+
+    // buscar sessoes finalizadas hoje para o usuario
+    const sessionsToday = await prisma.workoutSession.findMany({
+      where: {
+        userId,
+        completedAt: { gte: today }
+      }
+    });
+
+    // somar as calorias das sessoes de hoje
+    const caloriesToday = sessionsToday.reduce(
+      (accumulator, session) => accumulator + session.actualCalories,
+      0
+    );
+
+    // buscar todos os check-ins do usuario do mais recente para o mais antigo
+    const checkins = await prisma.checkin.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // calcular metricas do usuario
+    const totalCheckins = checkins.length;
+    const metaAtual = Math.max(5, Math.ceil(totalCheckins / 5) * 5);
+    const streakDays = calculateStreak(checkins);
+
+    // retornar o resumo das estatisticas
+    return res.json({
+      caloriesToday,
+      checkins: totalCheckins,
+      metaAtual,
+      streakDays
+    });
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
 router.get('/ranking', auth, async (req, res) => {
   try {
     // agrupar check-ins por usuario e ordenar pelos maiores totais

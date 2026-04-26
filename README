@@ -51,4 +51,5 @@ Sistema acadêmico para gestão de academia, com foco em alunos, instrutores, ch
 - [x] Criar atribuição de treinos
 - [x] Criar check-in e ranking
 - [ ] Criar dashboard/stats
+- [ ] Criar fluxo de rating
 - [ ] Integrar frontend com backend
