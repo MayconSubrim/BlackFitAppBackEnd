@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
 import checkinRoutes from './routes/checkin.routes.js';
+import ratingRoutes from './routes/rating.routes.js';
 import userRoutes from './routes/user.routes.js';
 import workoutRoutes from './routes/workout.routes.js';
 
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use('/auth', authRoutes);
 app.use('/checkins', checkinRoutes);
+app.use('/ratings', ratingRoutes);
 app.use('/users', userRoutes);
 app.use('/workouts', workoutRoutes);
 
