@@ -2,8 +2,9 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
+import { auth } from '../middlewares/auth.js';
 import { requireEnv } from '../utils/env.js';
-import { badRequest, handleError } from '../utils/errors.js';
+import { badRequest, handleError, notFound } from '../utils/errors.js';
 import { serializeUser } from '../utils/serializers.js';
 import {
   normalizeEmail,
@@ -13,6 +14,24 @@ import {
 } from '../utils/validations.js';
 
 const router = Router();
+
+router.get('/me', auth, async (req, res) => {
+  try {
+    // buscar usuario autenticado pelo id salvo no token
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    if (!user) {
+      throw notFound('Usuario nao encontrado');
+    }
+
+    // remover senha antes de enviar resposta
+    return res.json(serializeUser(user));
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
 
 router.post('/register', async (req, res) => {
   try {
