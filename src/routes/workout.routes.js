@@ -152,6 +152,12 @@ router.get('/getWorkouts', auth, async (req, res) => {
               }
             }
           }
+        },
+        sessions: {
+          where: {
+            userId: req.user.id
+          },
+          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: { createdAt: 'desc' }
