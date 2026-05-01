@@ -163,4 +163,88 @@ router.get('/getWorkouts', auth, async (req, res) => {
   }
 });
 
+router.delete('/:id/assignments/:userId', auth, async (req, res) => {
+  try {
+    // somente instrutor pode remover atribuicao de treino
+    if (req.user.role !== ROLES.INSTRUCTOR) {
+      throw forbidden();
+    }
+
+    // validar ids da rota
+    const workoutId = normalizeString(req.params?.id, 'id');
+    const userId = normalizeString(req.params?.userId, 'userId');
+
+    const workout = await prisma.workout.findUnique({
+      where: { id: workoutId }
+    });
+
+    if (!workout) {
+      throw notFound('Treino nao encontrado');
+    }
+
+    if (workout.instructorId !== req.user.id) {
+      throw forbidden('Voce nao pode alterar este treino');
+    }
+
+    const assignment = await prisma.workoutAssignment.findUnique({
+      where: {
+        userId_workoutId: {
+          userId,
+          workoutId
+        }
+      }
+    });
+
+    if (!assignment) {
+      throw notFound('Atribuicao nao encontrada');
+    }
+
+    // remove apenas o vinculo entre aluno e treino, mantendo o treino criado
+    await prisma.workoutAssignment.delete({
+      where: {
+        userId_workoutId: {
+          userId,
+          workoutId
+        }
+      }
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    // somente instrutor pode excluir treino criado por ele
+    if (req.user.role !== ROLES.INSTRUCTOR) {
+      throw forbidden();
+    }
+
+    const id = normalizeString(req.params?.id, 'id');
+
+    const workout = await prisma.workout.findUnique({
+      where: { id }
+    });
+
+    if (!workout) {
+      throw notFound('Treino nao encontrado');
+    }
+
+    if (workout.instructorId !== req.user.id) {
+      throw forbidden('Voce nao pode excluir este treino');
+    }
+
+    // remove o treino e deixa o Prisma apagar exercicios/atribuicoes em cascata
+    await prisma.workout.delete({
+      where: { id }
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
 export default router;

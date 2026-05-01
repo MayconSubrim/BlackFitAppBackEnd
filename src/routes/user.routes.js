@@ -31,6 +31,36 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+router.get('/my-students', auth, async (req, res) => {
+  try {
+    // somente instrutor pode listar os alunos vinculados a ele
+    if (req.user.role !== ROLES.INSTRUCTOR) {
+      throw forbidden();
+    }
+
+    // buscar alunos da carteira do instrutor logado
+    const students = await prisma.user.findMany({
+      where: {
+        role: ROLES.STUDENT,
+        instructorId: req.user.id
+      },
+      include: {
+        workoutAssignments: true
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    return res.json(
+      students.map((student) => ({
+        ...serializeUser(student),
+        workouts: student.workoutAssignments.length
+      }))
+    );
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
 router.post('/create-student', auth, async (req, res) => {
   try {
     // somente recepcionista pode criar aluno
