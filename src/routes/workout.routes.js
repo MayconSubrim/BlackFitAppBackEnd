@@ -11,6 +11,7 @@ import {
 } from '../utils/validations.js';
 
 const router = Router();
+const WORKOUT_REPEAT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 router.post('/', auth, async (req, res) => {
   try {
@@ -164,6 +165,166 @@ router.get('/getWorkouts', auth, async (req, res) => {
     });
 
     return res.json(workouts);
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const id = normalizeString(req.params?.id, 'id');
+
+    const where =
+      req.user.role === ROLES.INSTRUCTOR
+        ? {
+            id,
+            instructorId: req.user.id
+          }
+        : {
+            id,
+            assignments: {
+              some: {
+                userId: req.user.id
+              }
+            }
+          };
+
+    // buscar detalhe do treino permitido para o usuario logado
+    const workout = await prisma.workout.findFirst({
+      where,
+      include: {
+        exercises: {
+          orderBy: { order: 'asc' }
+        },
+        sessions: {
+          where: {
+            userId: req.user.id
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!workout) {
+      throw notFound('Treino nao encontrado');
+    }
+
+    return res.json(workout);
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
+router.post('/:id/sessions/start', auth, async (req, res) => {
+  try {
+    // somente aluno inicia execucao de treino
+    if (req.user.role !== ROLES.STUDENT) {
+      throw forbidden('Apenas alunos podem iniciar treinos');
+    }
+
+    const workoutId = normalizeString(req.params?.id, 'id');
+
+    const workout = await prisma.workout.findFirst({
+      where: {
+        id: workoutId,
+        assignments: {
+          some: {
+            userId: req.user.id
+          }
+        }
+      }
+    });
+
+    if (!workout) {
+      throw notFound('Treino nao encontrado');
+    }
+
+    const lastCompletedSession = await prisma.workoutSession.findFirst({
+      where: {
+        userId: req.user.id,
+        workoutId,
+        completedAt: { not: null }
+      },
+      orderBy: { completedAt: 'desc' }
+    });
+
+    if (
+      lastCompletedSession?.completedAt &&
+      Date.now() - lastCompletedSession.completedAt.getTime() < WORKOUT_REPEAT_COOLDOWN_MS
+    ) {
+      throw forbidden('Este treino so pode ser feito novamente apos 24 horas');
+    }
+
+    const openSession = await prisma.workoutSession.findFirst({
+      where: {
+        userId: req.user.id,
+        workoutId,
+        completedAt: null
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (openSession) {
+      return res.json(openSession);
+    }
+
+    // criar sessao aberta para acompanhar inicio/finalizacao
+    const session = await prisma.workoutSession.create({
+      data: {
+        userId: req.user.id,
+        workoutId
+      }
+    });
+
+    return res.status(201).json(session);
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
+router.patch('/sessions/:sessionId/finish', auth, async (req, res) => {
+  try {
+    // somente aluno finaliza a propria sessao
+    if (req.user.role !== ROLES.STUDENT) {
+      throw forbidden('Apenas alunos podem finalizar treinos');
+    }
+
+    const sessionId = normalizeString(req.params?.sessionId, 'sessionId');
+
+    const session = await prisma.workoutSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        workout: true
+      }
+    });
+
+    if (!session || session.userId !== req.user.id) {
+      throw notFound('Sessao de treino nao encontrada');
+    }
+
+    if (session.completedAt) {
+      return res.json(session);
+    }
+
+    const actualDuration = req.body?.actualDuration
+      ? normalizePositiveInt(req.body.actualDuration, 'actualDuration', { max: 1440 })
+      : Math.max(1, Math.round((Date.now() - session.startedAt.getTime()) / 60000));
+
+    const actualCalories = req.body?.actualCalories
+      ? normalizePositiveInt(req.body.actualCalories, 'actualCalories', { max: 5000 })
+      : session.workout.estimatedCalories;
+
+    // finalizar sessao preenchendo metricas reais ou estimadas
+    const completedSession = await prisma.workoutSession.update({
+      where: { id: sessionId },
+      data: {
+        actualDuration,
+        actualCalories,
+        completedAt: new Date()
+      }
+    });
+
+    return res.json(completedSession);
   } catch (error) {
     return handleError(error, res);
   }
