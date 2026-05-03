@@ -18,25 +18,16 @@ router.get('/instructors', auth, async (req, res) => {
       throw forbidden('Apenas alunos podem visualizar instrutores para avaliacao');
     }
 
-    // buscar o aluno logado para descobrir se ele possui instrutor vinculado
-    const student = await prisma.user.findUnique({
-      where: { id: req.user.id }
-    });
-
-    // se o aluno tiver instrutor, listar apenas ele; senao listar todos os instrutores
-    const where = student?.instructorId
-      ? { id: student.instructorId, role: ROLES.INSTRUCTOR }
-      : { role: ROLES.INSTRUCTOR };
-
     // buscar instrutores com as notas recebidas
     const instructors = await prisma.user.findMany({
-      where,
+      where: { role: ROLES.INSTRUCTOR },
       select: {
         id: true,
         name: true,
         role: true,
         instructorRatings: {
           select: {
+            studentId: true,
             rating: true
           }
         }
@@ -48,6 +39,9 @@ router.get('/instructors', auth, async (req, res) => {
     return res.json(
       instructors.map((instructor) => {
         const totalReviews = instructor.instructorRatings.length;
+        const myRating = instructor.instructorRatings.find(
+          (item) => item.studentId === req.user.id
+        );
         const averageRating = totalReviews
           ? Number(
               (
@@ -60,7 +54,8 @@ router.get('/instructors', auth, async (req, res) => {
           id: instructor.id,
           name: instructor.name,
           totalReviews,
-          averageRating
+          averageRating,
+          myRating: myRating?.rating ?? null
         };
       })
     );
@@ -95,20 +90,21 @@ router.post('/', auth, async (req, res) => {
       throw notFound('Instrutor nao encontrado');
     }
 
-    // buscar o aluno logado para validar o vinculo com o instrutor
-    const student = await prisma.user.findUnique({
-      where: { id: req.user.id }
-    });
-
-    if (student?.instructorId && student.instructorId !== instructorId) {
-      throw forbidden('Voce so pode avaliar o seu instrutor');
-    }
-
-    // criar nova avaliacao
-    const newRating = await prisma.rating.create({
-      data: {
+    // criar ou atualizar avaliacao do aluno para o instrutor
+    const newRating = await prisma.rating.upsert({
+      where: {
+        studentId_instructorId: {
+          studentId: req.user.id,
+          instructorId
+        }
+      },
+      create: {
         studentId: req.user.id,
         instructorId,
+        rating,
+        comment
+      },
+      update: {
         rating,
         comment
       }
