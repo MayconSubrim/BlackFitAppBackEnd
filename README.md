@@ -134,4 +134,4 @@ Sistema academico para gestao de academia, com foco em alunos, instrutores, rece
 - [x] Criar fluxo de rating
 - [x] Integrar frontend com backend
 - [x] Preparar backend para deploy
-- [ ] Fazer deploy do backend
+- [x] Fazer deploy do backend
